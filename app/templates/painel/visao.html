@@ -1,0 +1,172 @@
+{% extends "painel/base.html" %}
+{% from "painel/macros.html" import badge, colunas %}
+{% block title %}Visão geral{% endblock %}
+{% block content %}
+<div class="p-cabeca">
+  <div>
+    <h1>Visão geral</h1>
+    <p class="p-cabeca__sub">Olá, {{ user.name.split(' ')[0] }}. Valores em horário de Belém.</p>
+  </div>
+  <form method="post" action="/painel/conferir" data-ocupado="Conferindo com a Asaas…">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn btn--contorno" type="submit"
+            title="Busca na Asaas todas as cobranças e corrige quem pagou e não foi ativado">
+      Conferir com a Asaas
+    </button>
+  </form>
+</div>
+
+{% if senha_ok %}<div class="alerta alerta--ok" role="status">Senha trocada.</div>{% endif %}
+{% if provider == "mock" %}
+<div class="alerta" role="note">Pagamentos em modo <strong>simulado</strong>: os números
+  abaixo vêm de cadastros de teste.</div>
+{% endif %}
+
+<section class="p-indicadores" aria-label="Indicadores">
+  <a class="p-indicador p-indicador--verde" href="/painel/associados?status=ACTIVE">
+    <span class="p-indicador__rotulo">Associados ativos</span>
+    <span class="p-indicador__valor">{{ o.counts.ativos }}</span>
+    <span class="p-indicador__nota">de {{ o.counts.total }} cadastro(s)</span>
+  </a>
+  <a class="p-indicador p-indicador--amarelo" href="/painel/associados?status=AWAITING_PAYMENT">
+    <span class="p-indicador__rotulo">Aguardando pagamento</span>
+    <span class="p-indicador__valor">{{ o.counts.aguardando }}</span>
+    <span class="p-indicador__nota">cadastrou e não pagou</span>
+  </a>
+  <a class="p-indicador p-indicador--vermelho" href="/painel/associados?status=OVERDUE">
+    <span class="p-indicador__rotulo">Inadimplentes</span>
+    <span class="p-indicador__valor">{{ o.counts.inadimplentes }}</span>
+    <span class="p-indicador__nota">cobrança vencida ou recusada</span>
+  </a>
+  <div class="p-indicador p-indicador--azul">
+    <span class="p-indicador__rotulo">Receita recorrente</span>
+    <span class="p-indicador__valor">{{ o.recorrente }}</span>
+    <span class="p-indicador__nota">por mês, dos ativos (anuais ÷ 12)</span>
+  </div>
+  <div class="p-indicador">
+    <span class="p-indicador__rotulo">Recebido este mês</span>
+    <span class="p-indicador__valor">{{ o.recebido_mes }}</span>
+    <span class="p-indicador__nota">{{ o.variacao or ("mês anterior: " ~ o.recebido_mes_anterior) }}</span>
+  </div>
+  <div class="p-indicador">
+    <span class="p-indicador__rotulo">Conversão</span>
+    <span class="p-indicador__valor">{{ o.conversao }}</span>
+    <span class="p-indicador__nota">{{ o.pagantes }} de {{ o.counts.total }} cadastros pagaram</span>
+  </div>
+</section>
+
+<div class="p-grade-2">
+  <section class="p-cartao">
+    {{ colunas("receita", "Recebido por mês", "Cobranças pagas, pela data do pagamento", o.receita) }}
+  </section>
+  <section class="p-cartao">
+    {{ colunas("cadastros", "Novos cadastros por mês", "Todos os formulários enviados, pagos ou não", o.cadastros) }}
+  </section>
+</div>
+
+<div class="p-grade-2">
+  <section class="p-cartao">
+    <figure class="p-grafico" aria-labelledby="planos-titulo">
+      <figcaption>
+        <h3 id="planos-titulo">Ativos por plano</h3>
+        <p>Separados por ciclo de cobrança</p>
+      </figcaption>
+      <ul class="p-legenda" aria-label="Legenda">
+        <li><i class="p-legenda__cor p-legenda__cor--mensal"></i>Mensal</li>
+        <li><i class="p-legenda__cor p-legenda__cor--anual"></i>Anual</li>
+      </ul>
+      <div class="p-barras">
+        {% for p in o.planos %}
+        <div class="p-barras__linha" tabindex="0">
+          <span class="p-barras__nome">{{ p.name }}</span>
+          <span class="p-barras__trilho">
+            {% if p.monthly %}<span class="p-barras__seg p-barras__seg--mensal" style="width: {{ '%.1f' % (p.ratio_m * 100) }}%"></span>{% endif %}
+            {% if p.yearly %}<span class="p-barras__seg p-barras__seg--anual" style="width: {{ '%.1f' % (p.ratio_y * 100) }}%"></span>{% endif %}
+          </span>
+          <span class="p-barras__valor">{{ p.total }}</span>
+          <span class="p-dica" role="tooltip">{{ p.name }}<strong>{{ p.monthly }} mensal · {{ p.yearly }} anual</strong></span>
+        </div>
+        {% endfor %}
+      </div>
+    </figure>
+  </section>
+
+  <section class="p-cartao">
+    <figure class="p-grafico" aria-labelledby="regionais-titulo">
+      <figcaption>
+        <h3 id="regionais-titulo">Ativos por regional</h3>
+        <p>Regional do CCPA escolhida no cadastro</p>
+      </figcaption>
+      {% if o.regionais %}
+      <div class="p-barras">
+        {% for r in o.regionais %}
+        <div class="p-barras__linha">
+          <span class="p-barras__nome">{{ r.name }}</span>
+          <span class="p-barras__trilho">
+            <span class="p-barras__seg p-barras__seg--mensal" style="width: {{ '%.1f' % (r.ratio * 100) }}%"></span>
+          </span>
+          <span class="p-barras__valor">{{ r.total }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="p-vazio">Ainda não há associados ativos.</p>
+      {% endif %}
+    </figure>
+  </section>
+</div>
+
+<div class="p-grade-2">
+  <section class="p-cartao">
+    <div class="p-cartao__cabeca">
+      <h2>Precisa de atenção</h2>
+      <a href="/painel/associados?status=AWAITING_PAYMENT">Ver todos</a>
+    </div>
+    <p class="p-cartao__sub">Cadastrou há mais de um dia e não pagou, ou está com cobrança vencida.</p>
+    {% if attention %}
+    <ul class="p-lista">
+      {% for m, pay in attention %}
+      <li>
+        <a class="p-lista__principal" href="/painel/associados/{{ m.id }}">
+          <strong>{{ m.trade_name or m.name }}</strong>
+          <span>{{ plans[m.plan_code].name if m.plan_code in plans else m.plan_code }}
+            · {{ local(m.created_at).strftime('%d/%m') }}</span>
+        </a>
+        {{ badge(m.status, status_labels, status_tones) }}
+        {% if m.mobile %}
+        <a class="btn btn--pequeno btn--verde" target="_blank" rel="noopener"
+           href="/painel/associados/{{ m.id }}/whatsapp?tipo=cobranca">Cobrar</a>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="p-vazio">Ninguém pendente. Tudo em dia.</p>
+    {% endif %}
+  </section>
+
+  <section class="p-cartao">
+    <div class="p-cartao__cabeca">
+      <h2>Últimos cadastros</h2>
+      <a href="/painel/associados">Ver todos</a>
+    </div>
+    {% if recent %}
+    <ul class="p-lista">
+      {% for m in recent %}
+      <li>
+        <a class="p-lista__principal" href="/painel/associados/{{ m.id }}">
+          <strong>{{ m.trade_name or m.name }}</strong>
+          <span>{{ plans[m.plan_code].name if m.plan_code in plans else m.plan_code }}
+            {{ "anual" if m.plan_code.endswith("_ANUAL") else "mensal" }}
+            · {{ local(m.created_at).strftime('%d/%m %H:%M') }}</span>
+        </a>
+        {{ badge(m.status, status_labels, status_tones) }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="p-vazio">Nenhum cadastro ainda.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

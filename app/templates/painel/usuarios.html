@@ -1,0 +1,88 @@
+{% extends "painel/base.html" %}
+{% from "painel/macros.html" import campo_erro %}
+{% block title %}Usuários{% endblock %}
+{% block content %}
+<div class="p-cabeca">
+  <div>
+    <h1>Usuários do painel</h1>
+    <p class="p-cabeca__sub"><strong>Administrador</strong> vê tudo, exporta planilha e gerencia usuários.
+      <strong>Equipe</strong> vê associados e cobra pelo WhatsApp, mas não exporta dados.</p>
+  </div>
+</div>
+
+{% if revealed %}
+{% set u, senha = revealed %}
+<div class="p-senha-revelada" role="status">
+  <p>Senha provisória de <strong>{{ u.name }}</strong> ({{ u.email }}):</p>
+  <p class="p-senha-revelada__valor"><code>{{ senha }}</code>
+    <button class="btn btn--pequeno btn--contorno" type="button" data-copiar="{{ senha }}">Copiar</button></p>
+  <p>Ela aparece <strong>só agora</strong>. Entregue pessoalmente ou por um link que se autodestrói, nunca por WhatsApp
+    ou e-mail comum. No primeiro acesso a pessoa será obrigada a trocá-la.</p>
+</div>
+{% endif %}
+
+<div class="p-grade-usuarios">
+  <section class="p-cartao p-cartao--tabela">
+    <div class="p-tabela-rolagem">
+      <table class="p-tabela">
+        <thead><tr><th scope="col">Nome</th><th scope="col">Perfil</th><th scope="col">Último acesso</th><th scope="col"></th></tr></thead>
+        <tbody>
+          {% for u in users %}
+          <tr{% if not u.active %} class="p-tabela__inativo"{% endif %}>
+            <td><strong>{{ u.name }}</strong><span class="p-tabela__sub">{{ u.email }}</span></td>
+            <td>{{ "Administrador" if u.is_admin else "Equipe" }}
+              {% if not u.active %}<span class="p-selo p-selo--neutro">Desativado</span>
+              {% elif u.must_change_password %}<span class="p-selo p-selo--amarelo">Senha provisória</span>{% endif %}</td>
+            <td class="p-tabela__data">{{ fmt_dt(u.last_login_at) if u.last_login_at else "Nunca entrou" }}</td>
+            <td class="p-tabela__acoes">
+              {% if u.id != user.id %}
+              <form method="post" action="/painel/usuarios/{{ u.id }}/senha"
+                    data-confirmar="Gerar uma nova senha para {{ u.name }}? A atual deixa de funcionar na hora.">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn--pequeno btn--contorno" type="submit">Nova senha</button>
+              </form>
+              <form method="post" action="/painel/usuarios/{{ u.id }}/ativo"
+                    data-confirmar="{{ ('Desativar ' ~ u.name ~ '? O acesso é cortado na hora.') if u.active else ('Reativar ' ~ u.name ~ '?') }}">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button class="btn btn--pequeno {{ 'btn--perigo' if u.active else 'btn--contorno' }}" type="submit">
+                  {{ "Desativar" if u.active else "Reativar" }}</button>
+              </form>
+              {% else %}
+              <span class="p-tabela__sub">Você</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="p-cartao">
+    <h2>Novo usuário</h2>
+    <form method="post" action="/painel/usuarios" class="p-form" novalidate>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label class="p-campo{% if errors.name %} p-campo--erro{% endif %}">
+        <span>Nome</span>
+        <input type="text" name="name" value="{{ form.name or '' }}" required maxlength="120">
+        {{ campo_erro(errors, "name") }}
+      </label>
+      <label class="p-campo{% if errors.email %} p-campo--erro{% endif %}">
+        <span>E-mail</span>
+        <input type="email" name="email" value="{{ form.email or '' }}" required>
+        {{ campo_erro(errors, "email") }}
+      </label>
+      <label class="p-campo">
+        <span>Perfil</span>
+        <select name="role">
+          {% for value, label in roles %}
+          <option value="{{ value }}"{% if (form.role or "EQUIPE") == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="btn btn--primario" type="submit">Criar e gerar senha</button>
+    </form>
+    <p class="p-nota">Não existe exclusão: um usuário desativado continua no registro de acessos, que é o que a LGPD pede.</p>
+  </section>
+</div>
+{% endblock %}

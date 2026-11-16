@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Associe-se{% endblock %} — CCPA</title>
+  <meta name="description" content="{% block description %}{{ brand.SHORT_DESCRIPTION }}{% endblock %}">
+  <meta name="robots" content="noindex, nofollow">
+  <meta property="og:site_name" content="CCPA — {{ brand.NAME }}">
+  <meta property="og:title" content="{{ self.title() }}">
+  <meta property="og:description" content="{{ self.description() }}">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="{{ base_url }}/static/img/logo-ccpa.png">
+  <meta name="twitter:card" content="summary_large_image">
+  {# Mesmo favicon do site principal (ccpara.com.br): a logo inteira num
+     quadrado branco, ocupando 87% da largura — proporção medida do original.
+     Gerado da logo em alta resolução, então fica mais nítido que o de lá. #}
+  <link rel="icon" href="/static/img/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="/static/css/ccpa.css">
+</head>
+<body>
+  {# Esta cópia é um projeto de portfólio, não o site oficial do clube. #}
+  <div class="aviso-portfolio" role="note">
+    {{ brand.PORTFOLIO_NOTICE }} Site oficial:
+    <a href="{{ brand.SITE_URL }}" target="_blank" rel="noopener">ccpara.com.br</a>
+  </div>
+  <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="topo">
+    <div class="container topo__inner">
+      <a class="topo__logo" href="/associe-se">
+        <img src="/static/img/logo-ccpa.png" alt="Clube de Criativos do Pará">
+        <span>Clube de Criativos<br>do Pará</span>
+      </a>
+      <a class="topo__saiba" href="{{ brand.SITE_URL }}" target="_blank" rel="noopener">
+        Conheça o clube
+      </a>
+    </div>
+    <div class="faixa" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  </header>
+
+  <main id="conteudo">{% block content %}{% endblock %}</main>
+
+  <footer class="rodape">
+    <div class="container">
+      <div class="rodape__grade">
+        <div class="rodape__marca">
+          {# Versão branca da marca, com o nome por extenso: a colorida some no
+             fundo escuro do rodapé. #}
+          <img src="/static/img/logo-ccpa-branca.png" alt="Clube de Criativos do Pará"
+               width="496" height="310">
+          <p>{{ brand.SHORT_DESCRIPTION }}</p>
+          <div class="redes">
+            {% for label, url in brand.SOCIAL_LINKS %}
+            <a href="{{ url }}" target="_blank" rel="noopener">{{ label }}</a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <h4>Associe-se</h4>
+          <ul>
+            <li><a href="/associe-se?tipo=estudante#formulario">Estudante</a></li>
+            <li><a href="/associe-se?tipo=profissional#formulario">Profissional</a></li>
+            <li><a href="/associe-se?tipo=pj#formulario">Empresa</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Contato</h4>
+          <ul>
+            <li><a href="mailto:{{ brand.EMAIL }}">{{ brand.EMAIL }}</a></li>
+            <li><a href="{{ brand.SITE_URL }}" target="_blank" rel="noopener">ccpara.com.br</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="rodape__fim">
+        <span>&copy; {{ year }} {{ brand.NAME }}. Todos os direitos reservados.</span>
+        <span>Pagamentos processados pela Asaas.</span>
+      </div>
+    </div>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,31 @@
+{% extends "painel/base.html" %}
+{% block title %}Escolher versão da logo{% endblock %}
+{% block content %}
+<p class="p-voltar"><a href="{{ '/painel/associados/' ~ member.id if voltar and member else '/painel/marcas' }}">← Voltar</a></p>
+
+<div class="p-cabeca">
+  <div>
+    <h1>Qual versão da logo?</h1>
+    <p class="p-cabeca__sub">O PDF de <strong>{{ nome }}</strong> tem {{ options|length }} versões.
+      Para a faixa da página, as horizontais costumam ficar melhores.</p>
+  </div>
+</div>
+
+<form method="post" action="/painel/marcas/escolher" class="p-form" data-ocupado="Salvando…">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="nome" value="{{ nome }}">
+  <input type="hidden" name="site" value="{{ site }}">
+  <input type="hidden" name="associado" value="{{ member.id if member else '' }}">
+  <input type="hidden" name="voltar" value="{{ voltar }}">
+  <div class="p-versoes">
+    {% for src in options %}
+    <label class="p-versao">
+      <input type="radio" name="escolha" value="{{ src }}" required{% if loop.first %} checked{% endif %}>
+      <span class="p-versao__cartao"><img src="{{ src }}" alt="Versão {{ loop.index }}"></span>
+      <span class="p-versao__rotulo">Versão {{ loop.index }}</span>
+    </label>
+    {% endfor %}
+  </div>
+  <button class="btn btn--primario" type="submit">Usar esta versão</button>
+</form>
+{% endblock %}

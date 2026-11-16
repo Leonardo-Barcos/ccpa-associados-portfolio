@@ -1,0 +1,80 @@
+[project]
+name = "ccpa-associados-portfolio"
+version = "1.0.0"
+description = "Página de associados do Clube de Criativos do Pará"
+requires-python = ">=3.11"
+
+# Espelha o requirements.txt, linha por linha, e há um teste que garante isso.
+#
+# Duas listas não é elegante, mas é necessário: a Vercel procura dependências
+# no pyproject.toml ANTES do requirements.txt, e um `[project]` sem esta chave
+# ela lê como "projeto sem dependências". Resultado: instala nada, e toda
+# requisição morre em `ModuleNotFoundError: No module named 'fastapi'` com o
+# build verde. O requirements.txt continua existindo porque é o que o
+# `pip install -r` local usa.
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.20",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "email-validator>=2.2",
+    "sqlalchemy>=2.0.36",
+    "argon2-cffi>=23.1",
+    "httpx>=0.28",
+    "slowapi>=0.1.9",
+    "python-dotenv>=1.0",
+    "tzdata>=2024.1",
+    "pillow>=11.0",
+    "pypdfium2>=4.30",
+    'psycopg[binary]>=3.2.10 ; sys_platform != "win32"',
+]
+
+# A Vercel encontra `app/main.py` sozinha, mas carrega o arquivo solto — e aí
+# os imports relativos de dentro do pacote (`from .config import settings`)
+# falham com "attempted relative import with no known parent package", e toda
+# requisição vira 500. Declarar o caminho do MÓDULO faz a aplicação ser
+# importada como `app.main`, com o pacote `app` montado.
+[tool.vercel]
+entrypoint = "app.main:app"
+
+# Sem isto, qualquer `pip install .` morre: o setuptools encontra `app`,
+# `tests`, `scripts` e `docs` lado a lado na raiz e se recusa a adivinhar qual
+# deles é o pacote. Só `app` é código da aplicação.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 90
+target-version = "py311"
+exclude = [".venv", "__pycache__", "preview"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # erros de estilo (pycodestyle)
+    "F",    # erros reais: nome indefinido, import não usado, f-string sem campo
+    "W",    # avisos
+    "I",    # ordem dos imports
+    "B",    # bugs comuns (flake8-bugbear)
+    "UP",   # sintaxe antiga que já tem versão moderna
+    "C4",   # comprehensions ineficientes
+    "SIM",  # simplificações óbvias
+]
+ignore = [
+    "E501",  # comprimento de linha — o formatador já cuida
+    "B008",  # Depends() no argumento padrão é o jeito do FastAPI
+    "UP042", # (str, Enum) é proposital: o SQLAlchemy grava o valor como texto
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]  # os testes ajustam variáveis de ambiente antes dos imports
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

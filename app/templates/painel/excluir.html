@@ -1,0 +1,55 @@
+{% extends "painel/base.html" %}
+{% from "painel/macros.html" import badge %}
+{% block title %}Excluir cadastro{% endblock %}
+{% block content %}
+<p class="p-voltar"><a href="/painel/associados/{{ m.id }}">← Voltar para a ficha</a></p>
+
+<div class="p-cabeca">
+  <div>
+    <h1>Excluir cadastro</h1>
+    <p class="p-cabeca__sub">Esta ação apaga os dados do associado do sistema e não pode ser desfeita.</p>
+  </div>
+</div>
+
+<section class="p-cartao p-cartao--estreito p-exclusao">
+  <dl class="p-dados">
+    <div class="p-dado"><dt>Cadastro</dt><dd><strong>{{ m.trade_name or m.name }}</strong>{% if m.trade_name %} · {{ m.name }}{% endif %}</dd></div>
+    <div class="p-dado"><dt>Documento</dt><dd>{{ fmt_doc(m.document) }}</dd></div>
+    <div class="p-dado"><dt>Plano</dt><dd>{{ plan.name if plan else m.plan_code }} {{ "anual" if plan and plan.is_yearly else "mensal" }}</dd></div>
+    <div class="p-dado"><dt>Situação</dt><dd>{{ badge(m.status, status_labels, status_tones) }}</dd></div>
+    <div class="p-dado"><dt>Cadastrado em</dt><dd>{{ fmt_dt(m.created_at) }}</dd></div>
+  </dl>
+
+  {% if blocker %}
+  <div class="alerta" role="alert">{{ blocker }}</div>
+  <a class="btn btn--contorno" href="/painel/associados/{{ m.id }}">Voltar</a>
+  {% else %}
+  <div class="p-exclusao__efeitos">
+    <p><strong>O que acontece ao excluir:</strong></p>
+    <ul>
+      <li>O cadastro, as cobranças registradas e os e-mails enviados saem do banco.</li>
+      {% if in_asaas %}
+      <li>A assinatura é removida na Asaas, junto com as cobranças em aberto — nada mais será cobrado.</li>
+      {% endif %}
+      <li>O registro de acessos guarda que você excluiu, quando e o motivo.</li>
+    </ul>
+  </div>
+
+  {% if error %}<div class="alerta" role="alert">{{ error }}</div>{% endif %}
+
+  <form method="post" action="/painel/associados/{{ m.id }}/excluir" class="p-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="p-campo">
+      <span>Motivo</span>
+      <input type="text" name="motivo" value="{{ form.motivo or '' }}" required maxlength="300"
+             placeholder="Ex.: cadastro de teste">
+    </label>
+    <label class="p-campo">
+      <span>Para confirmar, digite {{ confirm_word }}</span>
+      <input type="text" name="confirmacao" required autocomplete="off" autocapitalize="characters">
+    </label>
+    <button class="btn btn--perigo" type="submit">Excluir definitivamente</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

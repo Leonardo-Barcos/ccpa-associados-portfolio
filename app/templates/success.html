@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Cadastro recebido{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="sucesso">
+    {% if member.status.value == 'ACTIVE' %}
+      <div class="selo">✓</div>
+      <h1 style="margin:0 0 .5rem">Associação confirmada!</h1>
+      {% if email_enabled %}
+      <p>Pagamento recebido. Você já faz parte do Clube de Criativos do Pará —
+         enviamos os dados de acesso para <strong>{{ member.email }}</strong>.</p>
+      {% else %}
+      <p>Pagamento recebido. Você já faz parte do Clube de Criativos do Pará.
+         Guarde seu login e o protocolo abaixo.</p>
+      {% endif %}
+      {% if pix and payment.mandate_status == 'ACTIVE' %}
+      <p class="pix-nota pix-nota--ok">Débito automático autorizado: as próximas
+         {{ plan.charge_noun }}s saem sozinhas pelo Pix Automático.</p>
+      {% elif pix and payment.mandate_status in ('REFUSED', 'CANCELLED', 'EXPIRED') %}
+      <p class="pix-nota">O primeiro pagamento entrou, mas o seu banco não confirmou
+         a autorização do débito automático. Fale com a gente em
+         <a href="mailto:{{ brand.EMAIL }}">{{ brand.EMAIL }}</a> para combinar os
+         próximos pagamentos.</p>
+      {% elif pix %}
+      <p class="pix-nota">Falta só o seu banco confirmar a autorização do débito
+         automático — isso acontece sozinho, em alguns minutos.</p>
+      {% endif %}
+
+    {% elif pix %}
+      <div class="selo">✓</div>
+      <h1 style="margin:0 0 .5rem">Cadastro recebido, {{ member.first_name }}!</h1>
+      <p>Falta um passo: pagar a primeira {{ plan.charge_noun }} com Pix. No mesmo
+         pagamento o app do seu banco pede a autorização do <strong>Pix
+         Automático</strong>, e as próximas saem sozinhas.</p>
+
+      {% if pix_renewed %}<div class="alerta alerta--ok" role="status">Pronto: geramos um QR Code novo.</div>{% endif %}
+      {% if pix_error %}<div class="alerta" role="alert">Não conseguimos gerar um QR Code novo agora. Tente de novo em alguns minutos.</div>{% endif %}
+
+      {% if pix_payable %}
+      <div class="pix">
+        {% if payment.pix_qr_image %}
+        <img class="pix__qr" src="data:image/png;base64,{{ payment.pix_qr_image }}"
+             alt="QR Code do Pix para pagar R$ {{ plan.amount_brl }}" width="220" height="220">
+        {% endif %}
+        <div class="pix__texto">
+          <ol class="passos">
+            <li><strong>Abra o app do seu banco</strong> e escolha pagar com Pix —
+                aponte a câmera para o QR Code ou use o código “copia e cola”.</li>
+            <li><strong>Confira o valor</strong> de R$ {{ plan.amount_brl }} e pague.</li>
+            <li><strong>Autorize o Pix Automático</strong> quando o banco perguntar.
+                É isso que faz as próximas {{ plan.charge_noun }}s saírem sozinhas —
+                e você pode cancelar no próprio app quando quiser.</li>
+          </ol>
+          <label class="pix__rotulo" for="pix-codigo">Pix copia e cola</label>
+          <div class="pix__copia">
+            <input id="pix-codigo" type="text" readonly value="{{ payment.pix_qr_payload }}">
+            <button class="btn btn--preto btn--pequeno" type="button" data-copiar="{{ payment.pix_qr_payload }}">Copiar</button>
+          </div>
+          {% if pix_expires_text %}<p class="pix__validade">Válido até {{ pix_expires_text }}.</p>{% endif %}
+        </div>
+      </div>
+      <p style="margin-top:1.2rem"><a class="btn btn--primario" href="/associe-se/sucesso/{{ member.id }}">Já paguei — atualizar</a></p>
+      {% if is_mock %}
+      <p style="font-size:.85rem"><a href="/pagamento/simulado/{{ member.id }}">Simular o pagamento (ambiente de teste)</a></p>
+      {% endif %}
+      {% elif pix_can_renew %}
+      <div class="alerta" role="alert">Este QR Code não vale mais — ele expira em 24 horas, ou o banco não concluiu a autorização.</div>
+      <form method="post" action="/associe-se/sucesso/{{ member.id }}/novo-pix">
+        <button class="btn btn--primario" type="submit">Gerar novo QR Code</button>
+      </form>
+      {% endif %}
+
+    {% elif pix_invoice %}
+      <div class="selo">✓</div>
+      <h1 style="margin:0 0 .5rem">Cadastro recebido, {{ member.first_name }}!</h1>
+      <p>Falta um passo: pagar a {{ plan.charge_noun }} com Pix. A associação é
+         ativada assim que o pagamento for confirmado.</p>
+
+      <ol class="passos">
+        <li><strong>Abra a cobrança</strong> no botão abaixo, na página segura da
+            Asaas — lá estão o QR Code e o código Pix copia e cola.</li>
+        <li><strong>Pague pelo app do seu banco.</strong> A confirmação chega em
+            poucos minutos.</li>
+        <li><strong>Nos próximos períodos</strong> a Asaas envia uma nova cobrança
+            Pix antes do vencimento.</li>
+      </ol>
+
+    {% elif email_enabled %}
+      <div class="selo">✓</div>
+      <h1 style="margin:0 0 .5rem">Cadastro recebido, {{ member.first_name }}!</h1>
+      <p>Enviamos um e-mail para <strong>{{ member.email }}</strong> com o link para
+         cadastrar seu cartão. Sua associação é ativada assim que o pagamento for
+         confirmado.</p>
+
+      <ol class="passos">
+        <li><strong>Confira seu e-mail.</strong> Se não estiver na caixa de entrada,
+            verifique spam ou promoções.</li>
+        <li><strong>Cadastre seu cartão de crédito</strong> na página segura da Asaas.
+            A {{ plan.charge_noun }} é recorrente e pode ser cancelada a qualquer
+            momento.</li>
+        <li><strong>Pronto.</strong> A confirmação chega em outro e-mail e libera sua
+            área do associado.</li>
+      </ol>
+
+    {% else %}
+      {# Sem e-mail configurado, esta página é a única entrega do link de
+         pagamento. Nada de mandar a pessoa olhar uma caixa de entrada onde não
+         vai chegar nada. #}
+      <div class="selo">✓</div>
+      <h1 style="margin:0 0 .5rem">Cadastro recebido, {{ member.first_name }}!</h1>
+      <p>Falta um passo: cadastrar seu cartão. A associação é ativada assim que o
+         pagamento for confirmado.</p>
+
+      <ol class="passos">
+        <li><strong>Cadastre seu cartão de crédito</strong> no botão abaixo, na página
+            segura da Asaas. A {{ plan.charge_noun }} é recorrente e pode ser
+            cancelada a qualquer momento.</li>
+        <li><strong>Se precisar pagar depois</strong>, guarde o endereço desta página
+            nos favoritos — é por aqui que você volta ao pagamento.</li>
+      </ol>
+    {% endif %}
+
+    <div class="resumo">
+      <dl>
+        <dt>Associado</dt><dd>{{ member.trade_name or member.name }}</dd>
+        <dt>Modalidade</dt><dd>{{ plan.name }}</dd>
+        <dt>Valor</dt>
+        <dd>R$ {{ plan.amount_brl }}{{ plan.cycle_label }}
+          <span style="font-weight:400;color:var(--tinta-fraca)">
+            &middot; {{ plan.renewal_label|lower }}</span>
+        </dd>
+        {% if member.chapter %}<dt>Regional</dt><dd>{{ member.chapter }}</dd>{% endif %}
+        <dt>Pagamento</dt><dd>{{ "Pix Automático" if pix else ("Pix" if pix_invoice else "Cartão de crédito") }}</dd>
+        <dt>Login</dt><dd>{{ member.login }}</dd>
+        <dt>Protocolo</dt><dd>{{ member.id[:8]|upper }}</dd>
+      </dl>
+    </div>
+
+    {% if member.status.value != 'ACTIVE' and payment and payment.checkout_url %}
+    {% if pix_invoice %}
+    <a class="btn btn--primario" href="{{ payment.checkout_url }}">Pagar com Pix</a>
+    <p style="font-size:.85rem;color:var(--tinta-fraca);margin-top:.9rem">
+      Pagamento processado pela Asaas.
+    </p>
+    {% elif not pix %}
+    <a class="btn btn--primario" href="{{ payment.checkout_url }}">Cadastrar meu cartão agora</a>
+    <p style="font-size:.85rem;color:var(--tinta-fraca);margin-top:.9rem">
+      Pagamento processado pela Asaas. O CCPA não armazena os dados do seu cartão.
+    </p>
+    {% endif %}
+
+    {% if not email_enabled %}
+    {# O link em texto existe para a pessoa conseguir copiar e voltar depois —
+       sem e-mail, fechar a aba sem isto significa ficar sem forma de pagar. #}
+    <div class="guardar">
+      <h3>Guarde este endereço</h3>
+      <p>Se fechar esta página antes de pagar, é por aqui que você volta:</p>
+      <p class="guardar__link">{{ base_url }}/associe-se/sucesso/{{ member.id }}</p>
+      <p style="margin:.7rem 0 0">
+        Em dúvida, fale com a gente em
+        <a href="mailto:{{ brand.EMAIL }}">{{ brand.EMAIL }}</a> informando o
+        protocolo <strong>{{ member.id[:8]|upper }}</strong>.
+      </p>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if email_enabled or member.status.value == 'ACTIVE' %}
+    <p style="font-size:.85rem;color:var(--tinta-fraca);margin-top:1.5rem">
+      Problemas? Fale com a gente em
+      <a href="mailto:{{ brand.EMAIL }}">{{ brand.EMAIL }}</a>
+      informando o protocolo acima.
+    </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="/static/js/sucesso.js" defer></script>{% endblock %}

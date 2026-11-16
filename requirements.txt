@@ -1,0 +1,25 @@
+# Dependências da aplicação. Este é o arquivo que a Vercel instala no deploy,
+# então tudo que roda em produção precisa estar aqui.
+# Versões com ">=" para funcionar em qualquer Python 3.11+.
+
+fastapi>=0.115
+uvicorn[standard]>=0.34
+jinja2>=3.1
+python-multipart>=0.0.20
+pydantic>=2.10
+pydantic-settings>=2.7
+email-validator>=2.2
+sqlalchemy>=2.0.36
+argon2-cffi>=23.1
+httpx>=0.28
+slowapi>=0.1.9
+python-dotenv>=1.0
+tzdata>=2024.1        # banco de fusos horários (o Windows não traz)
+pillow>=11.0          # logos: recorta margens, reduz e regrava em PNG
+pypdfium2>=4.30       # logos: aceita o PDF que o designer manda
+
+# Driver do PostgreSQL. O marcador pula a instalação no Windows, onde o
+# desenvolvimento usa SQLite e onde uma versão sem wheel pronta já quebrou o
+# `pip install` deste projeto uma vez. Em Linux — Vercel, Docker, servidor —
+# ele é instalado normalmente.
+psycopg[binary]>=3.2.10 ; sys_platform != "win32"

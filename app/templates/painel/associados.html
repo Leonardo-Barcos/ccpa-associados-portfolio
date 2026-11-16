@@ -1,0 +1,135 @@
+{% extends "painel/base.html" %}
+{% from "painel/macros.html" import badge %}
+{% block title %}Associados{% endblock %}
+{% block content %}
+<div class="p-cabeca">
+  <div>
+    <h1>Associados</h1>
+    <p class="p-cabeca__sub">{{ total }} {{ "resultado" if total == 1 else "resultados" }}{% if f.active %} com os filtros aplicados{% endif %}</p>
+  </div>
+  {% if user.is_admin %}
+  <a class="btn btn--contorno" href="/painel/associados/exportar.csv{% if f.query_string() %}?{{ f.query_string() }}{% endif %}"
+     title="Baixa exatamente a lista filtrada abaixo, com todos os campos do formulário">
+    Exportar planilha
+  </a>
+  {% endif %}
+</div>
+
+{% if deleted %}
+<div class="alerta alerta--ok" role="status">Cadastro de <strong>{{ deleted }}</strong> excluído.</div>
+{% endif %}
+
+<form class="p-filtros" method="get" action="/painel/associados" role="search">
+  <label class="p-campo p-filtros__busca">
+    <span>Buscar</span>
+    <input type="search" name="q" value="{{ f.q }}"
+           placeholder="Nome, e-mail, CPF/CNPJ, telefone, login…">
+  </label>
+  <label class="p-campo">
+    <span>Situação</span>
+    <select name="status">
+      <option value="">Todas</option>
+      {% for value, label in statuses %}
+      <option value="{{ value.value }}"{% if f.status == value.value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="p-campo">
+    <span>Plano</span>
+    <select name="plano">
+      <option value="">Todos</option>
+      {% for code, name in tiers %}
+      <option value="{{ code }}"{% if f.plano == code %} selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="p-campo">
+    <span>Ciclo</span>
+    <select name="ciclo">
+      <option value="">Todos</option>
+      <option value="MONTHLY"{% if f.ciclo == "MONTHLY" %} selected{% endif %}>Mensal</option>
+      <option value="YEARLY"{% if f.ciclo == "YEARLY" %} selected{% endif %}>Anual</option>
+    </select>
+  </label>
+  <label class="p-campo">
+    <span>Tipo</span>
+    <select name="tipo">
+      <option value="">Todos</option>
+      <option value="PF"{% if f.tipo == "PF" %} selected{% endif %}>Pessoa física</option>
+      <option value="PJ"{% if f.tipo == "PJ" %} selected{% endif %}>Empresa</option>
+    </select>
+  </label>
+  <label class="p-campo">
+    <span>Regional</span>
+    <select name="regional">
+      <option value="">Todas</option>
+      {% for c in chapters %}
+      <option value="{{ c }}"{% if f.regional == c %} selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="p-campo">
+    <span>Cadastro de</span>
+    <input type="date" name="desde" value="{{ f.desde }}">
+  </label>
+  <label class="p-campo">
+    <span>até</span>
+    <input type="date" name="ate" value="{{ f.ate }}">
+  </label>
+  <div class="p-filtros__acoes">
+    <button class="btn btn--preto btn--pequeno" type="submit">Filtrar</button>
+    {% if f.active %}<a class="btn btn--contorno btn--pequeno" href="/painel/associados">Limpar</a>{% endif %}
+  </div>
+</form>
+
+<section class="p-cartao p-cartao--tabela">
+  {% if rows %}
+  <div class="p-tabela-rolagem">
+    <table class="p-tabela">
+      <thead>
+        <tr>
+          <th scope="col">Associado</th>
+          <th scope="col">Plano</th>
+          <th scope="col">Situação</th>
+          <th scope="col">Regional</th>
+          <th scope="col">Contato</th>
+          <th scope="col">Cadastro</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in rows %}
+        {% set plan = plans.get(m.plan_code) %}
+        <tr>
+          <td>
+            <a class="p-tabela__nome" href="/painel/associados/{{ m.id }}">{{ m.trade_name or m.name }}</a>
+            <span class="p-tabela__sub">{{ "Empresa" if m.entity_type.value == "PJ" else "Pessoa física" }}{% if m.trade_name %} · {{ m.name }}{% endif %}</span>
+          </td>
+          <td>
+            {{ plan.name if plan else m.plan_code }}
+            <span class="p-tabela__sub">{{ "Anual" if plan and plan.is_yearly else "Mensal" }}{% if plan %} · R$ {{ plan.amount_brl }}{% endif %}{% if method_label(m).startswith("Pix") %} · Pix{% endif %}</span>
+          </td>
+          <td>{{ badge(m.status, status_labels, status_tones) }}</td>
+          <td>{{ m.chapter or "—" }}</td>
+          <td>
+            <span class="p-tabela__contato">{{ m.email }}</span>
+            {% if m.mobile %}<span class="p-tabela__sub">{{ fmt_phone(m.mobile) }}</span>{% endif %}
+          </td>
+          <td class="p-tabela__data">{{ local(m.created_at).strftime('%d/%m/%Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="p-paginas" aria-label="Páginas">
+    {% if f.pagina > 1 %}<a href="?{{ f.query_string(pagina=f.pagina - 1) }}">← Anterior</a>{% endif %}
+    <span>Página {{ f.pagina }} de {{ pages }}</span>
+    {% if f.pagina < pages %}<a href="?{{ f.query_string(pagina=f.pagina + 1) }}">Próxima →</a>{% endif %}
+  </nav>
+  {% endif %}
+  {% else %}
+  <p class="p-vazio">{{ "Nenhum associado com esses filtros." if f.active else "Nenhum cadastro ainda." }}</p>
+  {% endif %}
+</section>
+{% endblock %}

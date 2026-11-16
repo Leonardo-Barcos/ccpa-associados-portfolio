@@ -1,0 +1,67 @@
+{% extends "painel/base.html" %}
+{% from "painel/macros.html" import badge %}
+{% block title %}Forma de pagamento{% endblock %}
+{% block content %}
+<p class="p-voltar"><a href="/painel/associados/{{ m.id }}">← Voltar para a ficha</a></p>
+
+<div class="p-cabeca">
+  <div>
+    <h1>Trocar forma de pagamento</h1>
+    <p class="p-cabeca__sub">O cadastro continua o mesmo — só muda como a Asaas cobra este associado.</p>
+  </div>
+</div>
+
+<section class="p-cartao p-cartao--estreito p-exclusao">
+  <dl class="p-dados">
+    <div class="p-dado"><dt>Associado</dt><dd><strong>{{ m.trade_name or m.name }}</strong></dd></div>
+    <div class="p-dado"><dt>Plano</dt><dd>{{ plan.name if plan else m.plan_code }} {{ "anual" if plan and plan.is_yearly else "mensal" }}{% if plan %} · R$ {{ plan.amount_brl }}{{ plan.cycle_label }}{% endif %}</dd></div>
+    <div class="p-dado"><dt>Situação</dt><dd>{{ badge(m.status, status_labels, status_tones) }}</dd></div>
+    <div class="p-dado"><dt>Forma atual</dt><dd><strong>{{ method_label(m) or "—" }}</strong></dd></div>
+  </dl>
+
+  {% if error %}<div class="alerta" role="alert">{{ error }}</div>{% endif %}
+
+  {% if not payment %}
+  <div class="alerta" role="alert">Este cadastro não tem cobrança na Asaas para alterar.</div>
+  {% else %}
+  <form method="post" action="/painel/associados/{{ m.id }}/pagamento" class="p-form"
+        data-ocupado="Alterando na Asaas…">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <fieldset class="p-opcoes">
+      <legend>Nova forma de pagamento</legend>
+      {% for o in options %}
+      {% set is_current = o.value == current %}
+      <label class="p-opcao{% if o.blocked or is_current %} p-opcao--off{% endif %}">
+        <input type="radio" name="metodo" value="{{ o.value }}"
+               {% if o.blocked or is_current %}disabled{% endif %}
+               {% if form.metodo == o.value %}checked{% endif %}>
+        <span>
+          <strong>{{ o.label }}{% if is_current %} <em>(atual)</em>{% endif %}</strong>
+          <small>{{ o.desc }}</small>
+          {% if o.blocked and not is_current %}<small class="p-opcao__motivo">{{ o.blocked }}</small>{% endif %}
+        </span>
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <div class="p-exclusao__efeitos">
+      <p><strong>O que acontece:</strong></p>
+      <ul>
+        <li>Entre cartão e Pix, a mesma assinatura na Asaas é mantida e as cobranças em aberto passam para a nova forma — o link de pagamento continua o mesmo.</li>
+        {% if options|selectattr("value", "equalto", "PIX_AUTOMATIC")|list %}
+        <li>Para entrar ou sair do Pix Automático, a Asaas abre uma cobrança nova e a anterior é cancelada.</li>
+        {% endif %}
+        <li>Depois, use <strong>Cobrar no WhatsApp</strong> ou <strong>Copiar link de pagamento</strong> na ficha para avisar o associado.</li>
+      </ul>
+    </div>
+
+    <label class="p-campo">
+      <span>Motivo</span>
+      <input type="text" name="motivo" value="{{ form.motivo or '' }}" required maxlength="300"
+             placeholder="Ex.: associado prefere pagar no Pix">
+    </label>
+    <button class="btn btn--primario" type="submit">Trocar forma de pagamento</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

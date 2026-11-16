@@ -1,0 +1,38 @@
+{% extends "painel/base.html" %}
+{% from "painel/macros.html" import campo_erro %}
+{% block title %}Trocar senha{% endblock %}
+{% block content %}
+<div class="p-cabeca">
+  <div>
+    <h1>{{ "Escolha a sua senha" if user.must_change_password else "Trocar senha" }}</h1>
+    {% if user.must_change_password %}
+    <p class="p-cabeca__sub">A senha que você recebeu foi gerada por outra pessoa.
+      Antes de continuar, troque por uma que só você conheça.</p>
+    {% endif %}
+  </div>
+</div>
+
+<section class="p-cartao p-cartao--estreito">
+  <form method="post" action="/painel/senha" class="p-form" novalidate>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="p-campo{% if errors.atual %} p-campo--erro{% endif %}">
+      <span>Senha atual{% if user.must_change_password %} (a que você recebeu){% endif %}</span>
+      <input type="password" name="atual" required autocomplete="current-password">
+      {{ campo_erro(errors, "atual") }}
+    </label>
+    <label class="p-campo{% if errors.nova %} p-campo--erro{% endif %}">
+      <span>Nova senha</span>
+      <input type="password" name="nova" required minlength="10" autocomplete="new-password">
+      <small>Pelo menos 10 caracteres. Uma frase curta é mais fácil de lembrar e mais difícil de adivinhar.</small>
+      {{ campo_erro(errors, "nova") }}
+    </label>
+    <label class="p-campo{% if errors.confirmacao %} p-campo--erro{% endif %}">
+      <span>Repita a nova senha</span>
+      <input type="password" name="confirmacao" required autocomplete="new-password">
+      {{ campo_erro(errors, "confirmacao") }}
+    </label>
+    <button class="btn btn--primario" type="submit">Salvar senha</button>
+  </form>
+  <p class="p-nota">Ao trocar a senha, qualquer outra sessão aberta com a sua conta é encerrada.</p>
+</section>
+{% endblock %}

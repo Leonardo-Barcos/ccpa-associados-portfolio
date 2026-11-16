@@ -1,0 +1,54 @@
+{% macro nav_link(href, label, current) -%}
+  <a href="{{ href }}"{% if current %} aria-current="page"{% endif %}>{{ label }}</a>
+{%- endmacro %}
+
+{% macro badge(status, labels, tones) -%}
+  <span class="p-selo p-selo--{{ tones[status] }}">{{ labels[status] }}</span>
+{%- endmacro %}
+
+{# Colunas por mês. Série única, então sem legenda: o título diz o que é.
+   Rótulo só no mês atual e no maior mês; o resto fica na dica ao passar o
+   mouse (ou focar com o teclado) e na tabela logo abaixo. #}
+{% macro colunas(id, titulo, subtitulo, serie) -%}
+<figure class="p-grafico" aria-labelledby="{{ id }}-titulo">
+  <figcaption>
+    <h3 id="{{ id }}-titulo">{{ titulo }}</h3>
+    <p>{{ subtitulo }} · total no período: <strong>{{ serie.total_text }}</strong></p>
+  </figcaption>
+  {% if serie.empty %}
+    <p class="p-vazio">Nenhum registro nos últimos 12 meses.</p>
+  {% else %}
+  <div class="p-colunas" role="img" aria-label="{{ titulo }}, últimos 12 meses">
+    <div class="p-colunas__eixo" aria-hidden="true">
+      {% for tick in serie.ticks %}<span>{{ tick }}</span>{% endfor %}
+    </div>
+    <div class="p-colunas__area">
+      <div class="p-colunas__grade" aria-hidden="true"><i></i><i></i><i></i></div>
+      {% for b in serie.bars %}
+      <div class="p-coluna" tabindex="0">
+        <div class="p-coluna__trilho" style="--h: {{ '%.1f' % (b.ratio * 100) }}%">
+          {% if b.labelled %}<span class="p-coluna__valor">{{ b.text }}</span>{% endif %}
+          <div class="p-coluna__barra"></div>
+        </div>
+        <span class="p-coluna__mes">{{ b.label }}</span>
+        <span class="p-dica" role="tooltip">{{ b.label }}<strong>{{ b.text }}</strong></span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <details class="p-tabela-dados">
+    <summary>Ver em tabela</summary>
+    <table>
+      <thead><tr><th scope="col">Mês</th><th scope="col">Valor</th></tr></thead>
+      <tbody>
+        {% for b in serie.bars %}<tr><td>{{ b.label }}</td><td>{{ b.text }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </details>
+  {% endif %}
+</figure>
+{%- endmacro %}
+
+{% macro campo_erro(errors, name) -%}
+  {% if errors.get(name) %}<span class="p-erro" id="{{ name }}-erro">{{ errors[name] }}</span>{% endif %}
+{%- endmacro %}

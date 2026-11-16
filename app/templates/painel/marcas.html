@@ -1,0 +1,105 @@
+{% extends "painel/base.html" %}
+{% block title %}Empresas associadas{% endblock %}
+{% block content %}
+<div class="p-cabeca">
+  <div>
+    <h1>Empresas associadas</h1>
+    <p class="p-cabeca__sub">As logos aparecem no topo da página de cadastro, ao lado do texto principal, na ordem abaixo — em branco, direto no fundo escuro (dá para manter as cores originais de uma logo, que aí vai num cartão branco).
+      Com {{ marquee_min }} ou mais logos visíveis a faixa passa a rolar sozinha; com menos, elas ficam paradas e centralizadas.</p>
+  </div>
+  <div class="p-acoes">
+    <a class="btn btn--contorno" href="/associe-se" target="_blank" rel="noopener">Ver a página</a>
+  </div>
+</div>
+
+{% if notice %}<div class="alerta alerta--ok" role="status">{{ notice }}</div>{% endif %}
+{% if error %}<div class="alerta" role="alert">{{ error }}</div>{% endif %}
+
+<div class="p-grade-usuarios">
+  <section class="p-cartao p-cartao--tabela">
+    <div class="p-cartao__cabeca">
+      <h2>Na página agora: {{ visible }} de {{ logos|length }}</h2>
+    </div>
+    {% if logos %}
+    <ul class="p-marcas">
+      {% for logo in logos %}
+      <li class="p-marca{% if not logo.active %} p-marca--oculta{% endif %}">
+        <img class="p-marca__img{% if logo.tone != 'original' %} p-marca__img--escura{% endif %}" src="/painel/marcas/{{ logo.id }}/imagem?v={{ logo.version }}" alt="Logo de {{ logo.name }}">
+        <div class="p-marca__texto">
+          <strong>{{ logo.name }}</strong>
+          {% if logo.member_id and member_names.get(logo.member_id) %}
+          <span>Associado: <a href="/painel/associados/{{ logo.member_id }}">{{ member_names[logo.member_id] }}</a></span>
+          {% endif %}
+          <span>{% if logo.website %}<a href="{{ logo.website }}" target="_blank" rel="noopener noreferrer">{{ logo.website.split('//', 1)[-1] }}</a>{% else %}sem link{% endif %}
+            · {{ "na página" if logo.active else "oculta" }}</span>
+        </div>
+        <div class="p-marca__acoes">
+          <form method="post" action="/painel/marcas/{{ logo.id }}/subir">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn btn--pequeno btn--contorno" type="submit" aria-label="Mover {{ logo.name }} para cima"{% if loop.first %} disabled{% endif %}>↑</button>
+          </form>
+          <form method="post" action="/painel/marcas/{{ logo.id }}/descer">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn btn--pequeno btn--contorno" type="submit" aria-label="Mover {{ logo.name }} para baixo"{% if loop.last %} disabled{% endif %}>↓</button>
+          </form>
+          <form method="post" action="/painel/marcas/{{ logo.id }}/cor">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn btn--pequeno btn--contorno" type="submit"
+                    title="{{ 'Hoje: branca, direto no fundo escuro' if logo.tone != 'original' else 'Hoje: cores originais, num cartão branco' }}">
+              {{ "Usar cores originais" if logo.tone != "original" else "Usar branca" }}</button>
+          </form>
+          <form method="post" action="/painel/marcas/{{ logo.id }}/ativo">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn btn--pequeno btn--contorno" type="submit">{{ "Ocultar" if logo.active else "Mostrar" }}</button>
+          </form>
+          <form method="post" action="/painel/marcas/{{ logo.id }}/remover"
+                data-confirmar="Remover a logo de {{ logo.name }}? Para voltar, será preciso enviar o arquivo de novo.">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn btn--pequeno btn--perigo" type="submit">Remover</button>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="p-vazio">Nenhuma logo ainda. Enquanto a lista estiver vazia, a faixa não aparece na página.</p>
+    {% endif %}
+  </section>
+
+  <section class="p-cartao">
+    <h2>Adicionar logo</h2>
+    <form method="post" action="/painel/marcas" class="p-form" enctype="multipart/form-data"
+          data-ocupado="Enviando…">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label class="p-campo">
+        <span>Empresa associada</span>
+        <select name="associado">
+          <option value="">— não é associada / outra —</option>
+          {% for c in companies %}
+          <option value="{{ c.id }}"{% if form.associado == c.id %} selected{% endif %}>{{ c.trade_name or c.name }}</option>
+          {% endfor %}
+        </select>
+        <small>Escolhendo o associado, o nome e o site vêm do cadastro dele — só falta o arquivo.</small>
+      </label>
+      <label class="p-campo">
+        <span>Nome na página (opcional se escolheu o associado)</span>
+        <input type="text" name="nome" value="{{ form.nome or '' }}" maxlength="120">
+        <small>Vira o texto alternativo da imagem (leitores de tela e buscadores).</small>
+      </label>
+      <label class="p-campo">
+        <span>Site (opcional)</span>
+        <input type="text" name="site" value="{{ form.site or '' }}" inputmode="url" maxlength="255"
+               placeholder="www.empresa.com.br">
+        <small>Com site, a logo vira um link.</small>
+      </label>
+      <label class="p-campo">
+        <span>Arquivo da logo</span>
+        <input type="file" name="arquivo" accept="application/pdf,image/png,image/jpeg,image/webp" required>
+        <small>Pode mandar o PDF do jeito que o designer entregou, ou PNG/JPG/WEBP, até {{ max_mb }} MB.
+          As margens em branco são cortadas sozinhas. Se o PDF tiver várias versões da logo, você escolhe uma na próxima tela.</small>
+      </label>
+      <button class="btn btn--primario" type="submit">Adicionar</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,8 @@
+{
+  // Garante a quebra de linha no fim do arquivo e remove espaços soltos ao
+  // salvar. É o que evita os erros W291/W292/W293 que o ruff aponta e que
+  // fazem o check.py reprovar por motivo puramente cosmético.
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true
+}

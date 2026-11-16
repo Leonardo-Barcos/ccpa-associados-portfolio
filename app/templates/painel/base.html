@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Painel{% endblock %} — CCPA</title>
+  <link rel="icon" href="/static/img/favicon.ico" sizes="any">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+  <link rel="stylesheet" href="/static/css/ccpa.css">
+  <link rel="stylesheet" href="/static/css/painel.css">
+</head>
+<body class="p-corpo">
+  {# Esta cópia é um projeto de portfólio, não o site oficial do clube. #}
+  <div class="aviso-portfolio" role="note">
+    {{ brand.PORTFOLIO_NOTICE }} Site oficial:
+    <a href="{{ brand.SITE_URL }}" target="_blank" rel="noopener">ccpara.com.br</a>
+  </div>
+{% from "painel/macros.html" import nav_link %}
+<div class="p">
+  <header class="p-lateral">
+    <a class="p-lateral__marca" href="/painel">
+      <img src="/static/img/logo-ccpa-branca.png" alt="Clube de Criativos do Pará" width="496" height="310">
+      <span>Painel de gestão</span>
+    </a>
+
+    <nav class="p-nav" aria-label="Painel">
+      {{ nav_link("/painel", "Visão geral", path == "/painel") }}
+      {{ nav_link("/painel/associados", "Associados", path.startswith("/painel/associados")) }}
+      {% if user and user.is_admin %}
+        {{ nav_link("/painel/marcas", "Empresas associadas", path.startswith("/painel/marcas")) }}
+        {{ nav_link("/painel/usuarios", "Usuários", path.startswith("/painel/usuarios")) }}
+        {{ nav_link("/painel/registro", "Registro de acessos", path.startswith("/painel/registro")) }}
+      {% endif %}
+    </nav>
+
+    {% if user %}
+    <div class="p-conta">
+      <p class="p-conta__nome">{{ user.name }}</p>
+      <p class="p-conta__papel">{{ "Administrador" if user.is_admin else "Equipe" }}</p>
+      <div class="p-conta__acoes">
+        <a href="/painel/senha">Trocar senha</a>
+        <form method="post" action="/painel/sair">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit">Sair</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </header>
+
+  <main class="p-conteudo" id="conteudo">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="/static/js/painel.js" defer></script>
+</body>
+</html>

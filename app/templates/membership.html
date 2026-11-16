@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+{% block title %}Associe-se{% endblock %}
+{% block description %}Associe-se ao Clube de Criativos do Pará como estudante, profissional ou empresa.{% endblock %}
+
+{#
+  `sfx` suffixes every id, because both signup forms live on the same page and
+  duplicate ids would break the <label for=...> association.
+#}
+{% macro field(name, label, width="c-4", sfx="", type="text", required=False,
+               hint=None, inputmode=None, maxlength=None, autocomplete=None,
+               autocapitalize=None) %}
+<div class="campo {{ width }}">
+  <label for="{{ name }}_{{ sfx }}">
+    {% if required %}<span class="obrig" aria-hidden="true">*</span>{% endif %}{{ label }}
+  </label>
+  <input type="{{ type }}" id="{{ name }}_{{ sfx }}" name="{{ name }}"
+         value="{{ form.get(name, '') }}"
+         {% if required %}required{% endif %}
+         {% if inputmode %}inputmode="{{ inputmode }}"{% endif %}
+         {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+         {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+         {% if autocapitalize %}autocapitalize="{{ autocapitalize }}"{% endif %}
+         {% if errors.get(name) %}aria-invalid="true" aria-describedby="e-{{ name }}_{{ sfx }}"{% endif %}>
+  {% if hint %}<p class="ajuda">{{ hint }}</p>{% endif %}
+  {% if errors.get(name) %}
+  <p class="erro" id="e-{{ name }}_{{ sfx }}">{{ errors[name] }}</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro select(name, label, options, width="c-4", sfx="", required=False,
+                hint=None, blank="Selecione...") %}
+<div class="campo {{ width }}">
+  <label for="{{ name }}_{{ sfx }}">
+    {% if required %}<span class="obrig" aria-hidden="true">*</span>{% endif %}{{ label }}
+  </label>
+  <select id="{{ name }}_{{ sfx }}" name="{{ name }}" {% if required %}required{% endif %}
+          {% if errors.get(name) %}aria-invalid="true"{% endif %}>
+    <option value="">{{ blank }}</option>
+    {% for option in options %}
+    <option value="{{ option }}" {% if form.get(name) == option %}selected{% endif %}>
+      {{ option }}
+    </option>
+    {% endfor %}
+  </select>
+  {% if hint %}<p class="ajuda">{{ hint }}</p>{% endif %}
+  {% if errors.get(name) %}<p class="erro">{{ errors[name] }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro credentials_block(sfx) %}
+<fieldset>
+  <legend>Acesso à área do associado</legend>
+  <div class="linha">
+    {{ field("login", "Login", "c-4", required=True, sfx=sfx,
+             hint="Mínimo 4 caracteres. Letras, números, ponto, hífen e underline.",
+             autocomplete="username") }}
+    {{ field("password", "Senha", "c-4", type="password", required=True, sfx=sfx,
+             hint="Mínimo 8 caracteres, com letra e número.",
+             autocomplete="new-password") }}
+    {{ field("password_confirmation", "Confirmar senha", "c-4", type="password",
+             required=True, sfx=sfx, autocomplete="new-password") }}
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Termos de adesão</legend>
+  <div class="termos">
+    <input type="checkbox" id="accepted_terms_{{ sfx }}" name="accepted_terms"
+           {% if form.get('accepted_terms') %}checked{% endif %} required>
+    <label for="accepted_terms_{{ sfx }}" style="font-weight:400">
+      <span class="obrig" aria-hidden="true">*</span>
+      Declaro que li e aceito os
+      <a href="/static/termos-de-adesao.pdf" target="_blank" rel="noopener">termos de adesão</a>
+      e autorizo o tratamento dos meus dados conforme a LGPD.
+    </label>
+  </div>
+  {% if errors.get('accepted_terms') %}
+  <p class="erro">{{ errors['accepted_terms'] }}</p>
+  {% endif %}
+</fieldset>
+
+{% if pix_enabled %}
+{% set chosen = form.get('payment_method') or 'CREDIT_CARD' %}
+<fieldset>
+  <legend>Forma de pagamento</legend>
+  <div class="formas">
+    <div class="forma">
+      <input type="radio" id="pm_card_{{ sfx }}" name="payment_method" value="CREDIT_CARD"
+             {% if chosen == 'CREDIT_CARD' %}checked{% endif %}>
+      <label class="forma__box" for="pm_card_{{ sfx }}">
+        <span class="forma__nome">Cartão de crédito</span>
+        <span class="forma__desc">Cobrado automaticamente no cartão a cada período.
+          Você cadastra o cartão na página segura da Asaas.</span>
+      </label>
+    </div>
+    <div class="forma">
+      <input type="radio" id="pm_pix_{{ sfx }}" name="payment_method" value="PIX_AUTOMATIC"
+             {% if chosen == 'PIX_AUTOMATIC' %}checked{% endif %}>
+      <label class="forma__box" for="pm_pix_{{ sfx }}">
+        <span class="forma__nome">Pix Automático</span>
+        <span class="forma__desc">Você paga o primeiro período com um QR Code e
+          autoriza, no app do seu banco, o débito automático dos próximos.</span>
+      </label>
+    </div>
+  </div>
+  {% if errors.get('payment_method') %}<p class="erro">{{ errors['payment_method'] }}</p>{% endif %}
+</fieldset>
+
+<p class="aviso-pagamento">
+  Renovação automática no fim de cada período e cancelamento a qualquer
+  momento. Os dados do cartão e do banco ficam com a Asaas — o CCPA não recebe
+  nem armazena esses dados.
+</p>
+{% else %}
+<input type="hidden" name="payment_method" value="CREDIT_CARD">
+<p class="aviso-pagamento">
+  Pagamento apenas em <strong>cartão de crédito</strong>, com renovação
+  automática no fim de cada período e cancelamento a qualquer momento. O cartão
+  é cadastrado na página segura da Asaas — o CCPA não recebe nem armazena
+  esses dados.
+</p>
+{% endif %}
+
+<div class="acoes-form">
+  <p class="erro-envio" role="alert" hidden></p>
+  <button type="submit" class="btn btn--primario">Cadastrar e ir para o pagamento</button>
+</div>
+{% endmacro %}
+
+{#
+  Both cycles are rendered. `form.js` hides one and disables its radios — a
+  required radio inside a hidden container blocks submission with a browser
+  error the visitor cannot see. With JavaScript off, all cards stay on screen
+  and the form still works.
+#}
+{% macro plan_picker(plans_by_cycle, sfx) %}
+<div class="ciclos" role="group" aria-label="Periodicidade do pagamento" hidden>
+  {% for code, label in cycles %}
+  <button type="button" class="ciclo" data-cycle="{{ code }}"
+          aria-pressed="{{ 'true' if loop.first else 'false' }}">
+    {{ label }}
+    {% if code == 'YEARLY' %}<span class="ciclo__selo">1 mês grátis</span>{% endif %}
+  </button>
+  {% endfor %}
+</div>
+
+{% for code, label in cycles %}
+<div class="planos" data-cycle="{{ code }}">
+  {% for plan in plans_by_cycle[code] %}
+  <div class="plano">
+    <input type="radio" id="plan_{{ plan.code }}_{{ sfx }}" name="plan_code"
+           value="{{ plan.code }}"
+           {% if form.get('plan_code') == plan.code
+                 or (not form.get('plan_code') and loop.first and code == 'MONTHLY') %}checked{% endif %}
+           required>
+    <label class="plano__box" for="plan_{{ plan.code }}_{{ sfx }}">
+      <span class="plano__nome">
+        {{ plan.name }}
+        <span class="plano__ciclo">{{ label }}</span>
+      </span>
+      <span class="plano__preco">R$ {{ plan.amount_brl }}<small>{{ plan.cycle_label }}</small></span>
+      {% if plan.is_yearly %}
+      <span class="plano__economia">
+        Equivale a R$ {{ plan.monthly_equivalent_brl }}/mês &middot;
+        economia de R$ {{ plan.savings_brl }} no ano
+      </span>
+      {% endif %}
+      <p class="plano__desc">{{ plan.description }}</p>
+      <ul class="plano__lista">
+        {% for benefit in plan.benefits %}<li>{{ benefit }}</li>{% endfor %}
+      </ul>
+    </label>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% if errors.get('plan_code') %}<p class="erro">{{ errors['plan_code'] }}</p>{% endif %}
+{% endmacro %}
+
+{#
+  Estudante e profissional usam o mesmo formulário de pessoa física, cada um
+  na sua aba e só com os seus planos. `key` vira o sufixo dos ids e o nome
+  da aba. Os dois enviam para /associe-se/pf.
+#}
+{% macro individual_panel(key, plans_by_cycle) %}
+    
+    <div class="painel painel--{{ key }}" id="painel-{{ key }}" role="tabpanel" aria-labelledby="tab-{{ key }}"
+         {% if tab != key %}hidden{% endif %}>
+      {% if errors and tab == key %}
+      <div class="alerta" role="alert">
+        {% if errors.get('_general') %}{{ errors['_general'] }}
+        {% if errors|length > 1 %}<br>Confira também os campos destacados abaixo.{% endif %}
+        {% elif errors|length == 1 %}{{ errors.values()|first }}
+        {% else %}Confira os campos destacados abaixo e envie novamente.{% endif %}
+      </div>
+      {% endif %}
+
+      <form method="post" action="/associe-se/pf" novalidate>
+        <fieldset>
+          <legend>Tipo de associado</legend>
+          {{ plan_picker(plans_by_cycle, key) }}
+        </fieldset>
+
+        <fieldset>
+          <legend>Informações pessoais</legend>
+          <div class="linha">
+            {{ field("name", "Nome completo", "c-6", required=True, sfx=key,
+                     autocomplete="name") }}
+            {{ field("cpf", "CPF", "c-3", sfx=key, inputmode="numeric", maxlength=14,
+                     hint="Somente números ou com pontuação.") }}
+            {{ field("id_card", "RG", "c-3", sfx=key) }}
+            {{ field("birth_date", "Data de nascimento", "c-3", type="date", sfx=key) }}
+            {{ select("gender", "Gênero", genders, "c-3", sfx=key,
+                      blank="Prefiro não informar") }}
+            {{ select("chapter", "Regional CCPA", chapters, "c-3", sfx=key,
+                      hint="Regional do CCPA mais próxima de você.") }}
+          </div>
+          <div class="linha" style="margin-top:1rem">
+            {{ field("linkedin", "LinkedIn", "c-4", sfx=key, inputmode="url",
+                     hint="Pode colar o endereço do jeito que estiver.") }}
+            {{ field("company", "Empresa em que trabalha / estuda", "c-4", sfx=key) }}
+            {{ field("role", "Cargo / curso", "c-4", sfx=key) }}
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Informações de contato</legend>
+          <div class="linha">
+            {{ field("mobile", "Celular / WhatsApp", "c-4", type="tel", required=True,
+                     sfx=key, inputmode="tel", maxlength=15, autocomplete="tel") }}
+            {{ field("secondary_phone", "Telefone secundário", "c-4", type="tel",
+                     sfx=key, inputmode="tel", maxlength=15) }}
+          </div>
+          <div class="linha" style="margin-top:1rem">
+            {{ field("email", "E-mail principal", "c-6", type="email", required=True,
+                     sfx=key, hint="Usado para cobrança, notificações e acesso.",
+                     autocomplete="email") }}
+            {{ field("secondary_email", "E-mail secundário", "c-6", type="email",
+                     sfx=key) }}
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Endereço residencial</legend>
+          <div class="linha">
+            {{ field("postal_code", "CEP", "c-3", sfx=key, inputmode="numeric",
+                     maxlength=9, autocomplete="postal-code") }}
+            {{ field("street", "Endereço", "c-6", sfx=key,
+                     autocomplete="address-line1") }}
+            {{ field("number", "Número", "c-3", sfx=key) }}
+            {{ field("district", "Bairro", "c-4", sfx=key) }}
+            {{ select("state", "UF", states, "c-2", sfx=key, blank="--") }}
+            {{ field("city", "Cidade", "c-3", sfx=key) }}
+            {{ field("address_extra", "Complemento", "c-3", sfx=key) }}
+          </div>
+        </fieldset>
+
+        {{ credentials_block(key) }}
+      </form>
+    </div>
+{% endmacro %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero__grade{% if logos %} hero__grade--parceiros{% endif %}">
+    <div class="hero__texto">
+      <span class="olho">Associe-se</span>
+      <h1>Faça parte do <em>Clube de Criativos do Pará</em></h1>
+      <p>Uma rede que valoriza, registra e fomenta a criatividade paraense. Associe-se
+         como estudante, profissional ou empresa e conecte-se com quem move o mercado
+         criativo no Pará.</p>
+      <div class="hero__acoes">
+        <a class="btn btn--verde" href="#formulario">Quero me associar</a>
+        <a class="btn btn--fantasma" href="#beneficios">Ver benefícios</a>
+      </div>
+    </div>
+
+    {% if logos %}
+    {#
+      Empresas associadas, na coluna à direita do texto (embaixo dele no
+      celular). Com poucas logos elas ficam paradas; a partir de
+      `MARQUEE_MIN` (app/services/marcas.py) passam a rolar. Na rolagem a
+      lista aparece duas vezes e a faixa anda exatamente metade da largura,
+      então o fim emenda no começo sem salto. A segunda cópia é
+      `aria-hidden`: o leitor de tela lê cada empresa uma vez só.
+    #}
+    {% macro logo_chip(logo, hidden=False) -%}
+      <li class="parceiros__item{% if logo.tone == 'original' %} parceiros__item--cartao{% endif %}"{% if hidden %} aria-hidden="true"{% endif %}>
+        {% if logo.website %}<a href="{{ logo.website }}" target="_blank" rel="noopener noreferrer"{% if hidden %} tabindex="-1"{% endif %}>{% endif %}
+        <img src="{{ logo.url }}" alt="{{ '' if hidden else logo.name }}" decoding="async">
+        {% if logo.website %}</a>{% endif %}
+      </li>
+    {%- endmacro %}
+    <aside class="parceiros{% if logos_marquee %} parceiros--rolando{% else %} parceiros--{{ 'uma' if logos|length == 1 else 'poucas' }}{% endif %}"
+           aria-labelledby="parceiros-titulo">
+      <p class="parceiros__titulo" id="parceiros-titulo">Empresas associadas</p>
+      {% if logos_marquee %}
+      <div class="parceiros__trilho">
+        <ul class="parceiros__faixa" style="--duracao: {{ [logos|length * logos_copies * 3.5, 20]|max }}s">
+          {% for copy in range(logos_copies * 2) %}
+            {% for logo in logos %}{{ logo_chip(logo, hidden=(copy > 0)) }}{% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <ul class="parceiros__faixa parceiros__faixa--parada">
+        {% for logo in logos %}{{ logo_chip(logo) }}{% endfor %}
+      </ul>
+      {% endif %}
+    </aside>
+    {% endif %}
+  </div>
+</section>
+
+<section class="secao" id="beneficios">
+  <div class="container">
+    <div class="secao__cabeca">
+      <div>
+        <span class="olho olho--escuro">Benefícios</span>
+        <h2>O que você recebe como associado</h2>
+      </div>
+    </div>
+    <div class="grade">
+      {% for benefit in benefits %}
+      <article class="card {{ benefit.color }}">
+        <h3>{{ benefit.title }}</h3>
+        <p>{{ benefit.text }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="secao" id="formulario">
+  <div class="container">
+    {# Fichário em três abas, cada uma com uma cor do CCPA. Uma empresa já se
+       cadastrou como estudante por não ter notado que havia outra aba: com
+       as três coloridas e o aviso abaixo, a escolha fica impossível de
+       passar batido. #}
+    <p class="abas__aviso">Escolha a aba do seu perfil: <strong>estudante</strong>,
+      <strong>profissional</strong> ou <strong>empresa (CNPJ)</strong>.</p>
+    {# Ícones desenhados aqui mesmo, em SVG: sem biblioteca externa e com a
+       cor herdada do texto (currentColor). #}
+    {% set icones = {
+      "estudante": '<path d="M2 9.5 12 5l10 4.5-10 4.5L2 9.5Z"/><path d="M6 11.3v4.2c0 1.4 2.7 2.8 6 2.8s6-1.4 6-2.8v-4.2"/><path d="M21 10v5"/>',
+      "profissional": '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M3 12.5h18"/><path d="M11 12.5h2"/>',
+      "pj": '<path d="M5 21V4.5A1.5 1.5 0 0 1 6.5 3h7A1.5 1.5 0 0 1 15 4.5V21"/><path d="M15 10h3.5A1.5 1.5 0 0 1 20 11.5V21"/><path d="M3 21h18"/><path d="M8 7h1M11 7h1M8 10.5h1M11 10.5h1M8 14h1M11 14h1M17.5 14h.5M17.5 17h.5"/><path d="M9 21v-3h2v3"/>',
+    } %}
+    <div class="abas" role="tablist" aria-label="Tipo de associação">
+      {% for key, label in [("estudante", "Sou estudante"), ("profissional", "Sou profissional"), ("pj", "Sou empresa (CNPJ)")] %}
+      <button class="aba aba--{{ key }}" role="tab" id="tab-{{ key }}" aria-controls="painel-{{ key }}"
+              aria-selected="{{ 'true' if tab == key else 'false' }}">
+        <svg class="aba__icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{{ icones[key]|safe }}</svg>
+        <span class="aba__nome">{{ label }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- ============== PESSOA FÍSICA: estudante e profissional ============== -->
+    {{ individual_panel("estudante", student_plans) }}
+    {{ individual_panel("profissional", professional_plans) }}
+
+    <!-- ========================== COMPANY =========================== -->
+    <div class="painel painel--pj" id="painel-pj" role="tabpanel" aria-labelledby="tab-pj"
+         {% if tab != 'pj' %}hidden{% endif %}>
+      {% if errors and tab == 'pj' %}
+      <div class="alerta" role="alert">
+        {% if errors.get('_general') %}{{ errors['_general'] }}
+        {% if errors|length > 1 %}<br>Confira também os campos destacados abaixo.{% endif %}
+        {% elif errors|length == 1 %}{{ errors.values()|first }}
+        {% else %}Confira os campos destacados abaixo e envie novamente.{% endif %}
+      </div>
+      {% endif %}
+
+      <form method="post" action="/associe-se/pj" novalidate>
+        <fieldset>
+          <legend>Tipo de associado</legend>
+          {{ plan_picker(company_plans, "pj") }}
+        </fieldset>
+
+        <fieldset>
+          <legend>Informações cadastrais</legend>
+          <div class="linha">
+            {{ field("legal_name", "Razão social", "c-6", required=True, sfx="pj") }}
+            {{ field("trade_name", "Nome fantasia", "c-6", required=True, sfx="pj") }}
+            {{ field("cnpj", "CNPJ", "c-3", required=True, sfx="pj",
+                     maxlength=18, autocapitalize="characters",
+                     hint="Aceita também o novo CNPJ com letras.") }}
+            {{ field("state_registration", "Inscrição estadual", "c-3", sfx="pj") }}
+            {{ field("city_registration", "Inscrição municipal", "c-3", sfx="pj") }}
+            {{ select("chapter", "Regional CCPA", chapters, "c-3", required=True,
+                      sfx="pj", hint="Selecione a regional do CCPA mais próxima.") }}
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Informações de contato</legend>
+          <div class="linha">
+            {{ field("mobile", "Celular / WhatsApp", "c-3", type="tel", sfx="pj",
+                     inputmode="tel", maxlength=15) }}
+            {{ field("secondary_phone", "Telefone secundário", "c-3", type="tel",
+                     sfx="pj", inputmode="tel", maxlength=15) }}
+            {{ field("email", "E-mail principal", "c-3", type="email", required=True,
+                     sfx="pj", hint="Usado para cobrança e notificações.") }}
+            {{ field("secondary_email", "E-mail secundário", "c-3", type="email",
+                     sfx="pj") }}
+            {{ field("website", "Site", "c-6", sfx="pj", inputmode="url",
+                     hint="Ex.: www.suaempresa.com.br") }}
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Endereço</legend>
+          <div class="linha">
+            {{ field("postal_code", "CEP", "c-3", sfx="pj", inputmode="numeric",
+                     maxlength=9) }}
+            {{ field("street", "Endereço", "c-5", sfx="pj") }}
+            {{ field("number", "Número", "c-2", sfx="pj") }}
+            {{ field("district", "Bairro", "c-2", sfx="pj") }}
+            {{ select("state", "UF", states, "c-2", sfx="pj", blank="--") }}
+            {{ field("city", "Cidade", "c-4", sfx="pj") }}
+            {{ field("address_extra", "Complemento", "c-6", sfx="pj") }}
+          </div>
+        </fieldset>
+
+        {{ credentials_block("pj") }}
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/form.js" defer></script>
+{% endblock %}

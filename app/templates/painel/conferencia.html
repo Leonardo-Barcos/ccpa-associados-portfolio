@@ -1,0 +1,52 @@
+{% extends "painel/base.html" %}
+{% from "painel/macros.html" import badge %}
+{% block title %}Conferência com a Asaas{% endblock %}
+{% block content %}
+<p class="p-voltar"><a href="/painel">← Visão geral</a></p>
+<div class="p-cabeca">
+  <div>
+    <h1>Conferência com a Asaas</h1>
+    <p class="p-cabeca__sub">A Asaas é onde o dinheiro está. Quando ela e o painel discordam, vale o que está na Asaas.</p>
+  </div>
+</div>
+
+{% if r.error %}
+<div class="alerta" role="alert">{{ r.error }}</div>
+{% else %}
+<section class="p-indicadores p-indicadores--3" aria-label="Resumo">
+  <div class="p-indicador"><span class="p-indicador__rotulo">Associados verificados</span><span class="p-indicador__valor">{{ r.checked }}</span></div>
+  <div class="p-indicador p-indicador--{{ 'vermelho' if r.changes else 'verde' }}"><span class="p-indicador__rotulo">Situações corrigidas</span><span class="p-indicador__valor">{{ r.changes|length }}</span></div>
+  <div class="p-indicador"><span class="p-indicador__rotulo">Cobranças importadas</span><span class="p-indicador__valor">{{ r.charges_created }}</span><span class="p-indicador__nota">{{ r.charges_updated }} já existiam e foram atualizadas</span></div>
+</section>
+
+<section class="p-cartao">
+  <h2>O que mudou</h2>
+  {% if r.changes %}
+  <ul class="p-lista">
+    {% for c in r.changes %}
+    <li>
+      <a class="p-lista__principal" href="/painel/associados/{{ c.member.id }}"><strong>{{ c.member.trade_name or c.member.name }}</strong></a>
+      {{ badge(c.before, status_labels, status_tones) }} <span aria-hidden="true">→</span>
+      <span class="p-oculto">passou para</span> {{ badge(c.after, status_labels, status_tones) }}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="p-nota">Quem passou de "Aguardando pagamento" para "Ativo" recebeu o e-mail de confirmação que o webhook perdido teria enviado.</p>
+  {% else %}
+  <p class="p-vazio">Nada a corrigir: o painel já estava igual à Asaas.</p>
+  {% endif %}
+</section>
+
+{% if r.not_found %}
+<section class="p-cartao">
+  <h2>Não encontrados na Asaas</h2>
+  <p class="p-cartao__sub">A assinatura destes cadastros não apareceu na Asaas. Pode ter sido criada em outra conta (sandbox) ou removida. Nada foi alterado.</p>
+  <ul class="p-lista">
+    {% for m in r.not_found %}
+    <li><a class="p-lista__principal" href="/painel/associados/{{ m.id }}"><strong>{{ m.trade_name or m.name }}</strong></a>{{ badge(m.status, status_labels, status_tones) }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Entrar — Painel CCPA</title>
+  <link rel="icon" href="/static/img/favicon.ico" sizes="any">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Public+Sans:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="/static/css/ccpa.css">
+  <link rel="stylesheet" href="/static/css/painel.css">
+</head>
+<body class="p-entrada">
+  <div class="aviso-portfolio" role="note">
+    {{ brand.PORTFOLIO_NOTICE }} Site oficial:
+    <a href="{{ brand.SITE_URL }}" target="_blank" rel="noopener">ccpara.com.br</a>
+  </div>
+  <main class="p-entrada__caixa">
+    <img class="p-entrada__marca" src="/static/img/logo-ccpa-branca.png"
+         alt="Clube de Criativos do Pará" width="496" height="310">
+    <div class="faixa" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+    <div class="p-entrada__corpo">
+      <h1>Painel de gestão</h1>
+      <p class="p-entrada__nota">Acesso restrito. Os dados de associados aqui
+        são protegidos pela LGPD, e cada acesso fica registrado.</p>
+
+      {% if error %}<div class="alerta" role="alert">{{ error }}</div>{% endif %}
+
+      <form method="post" action="/painel/entrar" class="p-form">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="proxima" value="{{ proxima }}">
+        <label class="p-campo">
+          <span>E-mail</span>
+          <input type="email" name="email" value="{{ email or '' }}" required
+                 autocomplete="username" autofocus>
+        </label>
+        <label class="p-campo">
+          <span>Senha</span>
+          <input type="password" name="password" required autocomplete="current-password">
+        </label>
+        <button class="btn btn--primario p-form__enviar" type="submit">Entrar</button>
+      </form>
+
+      <p class="p-entrada__ajuda">Esqueceu a senha? Peça a um administrador do
+        painel para gerar uma nova.</p>
+    </div>
+  </main>
+</body>
+</html>

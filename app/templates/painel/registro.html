@@ -1,0 +1,56 @@
+{% extends "painel/base.html" %}
+{% block title %}Registro de acessos{% endblock %}
+{% block content %}
+<div class="p-cabeca">
+  <div>
+    <h1>Registro de acessos</h1>
+    <p class="p-cabeca__sub">Quem entrou, abriu fichas, exportou dados ou mudou algo no painel. {{ total }} registro(s).</p>
+  </div>
+</div>
+
+<form class="p-filtros p-filtros--curto" method="get" action="/painel/registro">
+  <label class="p-campo">
+    <span>Ação</span>
+    <select name="acao">
+      <option value="">Todas</option>
+      {% for value, label in labels.items() %}
+      <option value="{{ value }}"{% if acao == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <div class="p-filtros__acoes"><button class="btn btn--preto btn--pequeno" type="submit">Filtrar</button></div>
+</form>
+
+<section class="p-cartao p-cartao--tabela">
+  {% if entries %}
+  <div class="p-tabela-rolagem">
+    <table class="p-tabela">
+      <thead><tr><th scope="col">Quando</th><th scope="col">Quem</th><th scope="col">Ação</th><th scope="col">Detalhe</th><th scope="col">IP</th></tr></thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td class="p-tabela__data">{{ fmt_dt(e.created_at, '%d/%m/%Y %H:%M:%S') }}</td>
+          <td>{{ e.user_name or "—" }}</td>
+          <td>{{ labels.get(e.action, e.action) }}</td>
+          <td>
+            {% if e.action in ("viu_ficha", "whatsapp") and e.target %}<a href="/painel/associados/{{ e.target }}">{{ e.detail or e.target }}</a>
+            {% else %}{{ e.detail or e.target or "" }}{% endif %}
+          </td>
+          <td class="p-tabela__data">{{ e.ip or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if pages > 1 %}
+  <nav class="p-paginas" aria-label="Páginas">
+    {% if pagina > 1 %}<a href="?acao={{ acao }}&pagina={{ pagina - 1 }}">← Anterior</a>{% endif %}
+    <span>Página {{ pagina }} de {{ pages }}</span>
+    {% if pagina < pages %}<a href="?acao={{ acao }}&pagina={{ pagina + 1 }}">Próxima →</a>{% endif %}
+  </nav>
+  {% endif %}
+  {% else %}
+  <p class="p-vazio">Nenhum registro.</p>
+  {% endif %}
+</section>
+{% endblock %}

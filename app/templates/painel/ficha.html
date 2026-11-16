@@ -1,0 +1,206 @@
+{% extends "painel/base.html" %}
+{% from "painel/macros.html" import badge %}
+{% block title %}{{ m.trade_name or m.name }}{% endblock %}
+{% macro item(rotulo, valor) -%}
+  <div class="p-dado"><dt>{{ rotulo }}</dt><dd>{{ valor if valor else "—" }}</dd></div>
+{%- endmacro %}
+{% block content %}
+<p class="p-voltar"><a href="/painel/associados">← Associados</a></p>
+
+<div class="p-cabeca p-cabeca--ficha">
+  <div>
+    <h1>{{ m.trade_name or m.name }}</h1>
+    <p class="p-cabeca__sub">
+      {{ badge(m.status, status_labels, status_tones) }}
+      <span>{{ plan.name if plan else m.plan_code }} {{ "anual" if plan and plan.is_yearly else "mensal" }}</span>
+      {% if plan %}<span>R$ {{ plan.amount_brl }}{{ plan.cycle_label }}</span>{% endif %}
+      <span>Protocolo {{ m.id[:8]|upper }}</span>
+    </p>
+  </div>
+  <div class="p-acoes">
+    {% if has_whatsapp and can_charge %}
+    <a class="btn btn--verde" target="_blank" rel="noopener"
+       href="/painel/associados/{{ m.id }}/whatsapp?tipo=cobranca">Cobrar no WhatsApp</a>
+    {% endif %}
+    {% if has_whatsapp %}
+    <a class="btn btn--contorno" target="_blank" rel="noopener"
+       href="/painel/associados/{{ m.id }}/whatsapp">Conversar no WhatsApp</a>
+    {% endif %}
+    {% if can_charge and payment and payment.checkout_url %}
+    <button class="btn btn--contorno" type="button" data-copiar="{{ payment.checkout_url }}">
+      Copiar link de pagamento
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+{% if method_changed %}
+<div class="alerta alerta--ok" role="status">Forma de pagamento alterada para <strong>{{ method_label(m) }}</strong>.
+  {% if can_charge %}Avise o associado pelo WhatsApp ou copie o link de pagamento acima.{% else %}As próximas cobranças já saem na nova forma.{% endif %}</div>
+{% endif %}
+
+{% if can_charge and not has_whatsapp %}
+<div class="alerta" role="note">Sem celular válido no cadastro: a cobrança por WhatsApp não está disponível.
+  {% if payment and payment.checkout_url %}Copie o link de pagamento e envie por e-mail.{% endif %}</div>
+{% endif %}
+
+<div class="p-grade-ficha">
+  <section class="p-cartao">
+    <h2>{{ "Empresa" if m.entity_type.value == "PJ" else "Dados pessoais" }}</h2>
+    <dl class="p-dados">
+      {% if m.entity_type.value == "PJ" %}
+        {{ item("Razão social", m.name) }}
+        {{ item("Nome fantasia", m.trade_name) }}
+        {{ item("CNPJ", fmt_doc(m.document)) }}
+        {{ item("Inscrição estadual", m.state_registration) }}
+        {{ item("Inscrição municipal", m.city_registration) }}
+        {{ item("Site", m.website) }}
+      {% else %}
+        {{ item("Nome completo", m.name) }}
+        {{ item("CPF", fmt_doc(m.document)) }}
+        {{ item("RG", m.id_card) }}
+        {{ item("Nascimento", fmt_date(m.birth_date)) }}
+        {{ item("Gênero", m.gender) }}
+        {{ item("Empresa em que trabalha / estuda", m.company) }}
+        {{ item("Cargo / curso", m.role) }}
+        <div class="p-dado"><dt>LinkedIn</dt><dd>
+          {% if m.linkedin %}<a href="{{ m.linkedin if m.linkedin.startswith('http') else 'https://' ~ m.linkedin }}" target="_blank" rel="noopener noreferrer">{{ m.linkedin }}</a>{% else %}—{% endif %}
+        </dd></div>
+      {% endif %}
+      {{ item("Regional CCPA", m.chapter) }}
+    </dl>
+  </section>
+
+  <section class="p-cartao">
+    <h2>Contato</h2>
+    <dl class="p-dados">
+      <div class="p-dado"><dt>E-mail</dt><dd><a href="mailto:{{ m.email }}">{{ m.email }}</a></dd></div>
+      {{ item("E-mail secundário", m.secondary_email) }}
+      {{ item("Celular / WhatsApp", fmt_phone(m.mobile)) }}
+      {{ item("Telefone secundário", fmt_phone(m.secondary_phone) if m.secondary_phone else None) }}
+    </dl>
+    <h2 class="p-cartao__titulo-2">Endereço</h2>
+    <dl class="p-dados">
+      {{ item("CEP", fmt_cep(m.postal_code)) }}
+      {{ item("Logradouro", ((m.street or "") ~ (", " ~ m.number if m.number else "")) or None) }}
+      {{ item("Complemento", m.address_extra) }}
+      {{ item("Bairro", m.district) }}
+      {{ item("Cidade", ((m.city or "") ~ (" / " ~ m.state if m.state else "")) or None) }}
+    </dl>
+  </section>
+
+  <section class="p-cartao">
+    <h2>Associação</h2>
+    <dl class="p-dados">
+      {{ item("Cadastro", fmt_dt(m.created_at)) }}
+      {{ item("Login", m.login) }}
+      {{ item("Aceite dos termos", fmt_dt(m.accepted_terms_at) ~ (" · IP " ~ m.accepted_terms_ip if m.accepted_terms_ip else "")) }}
+      <div class="p-dado"><dt>Forma de pagamento</dt><dd>{{ method_label(m) or "—" }}
+        {% if user.is_admin and payment and m.status.value != "CANCELLED" %}· <a href="/painel/associados/{{ m.id }}/pagamento">Trocar</a>{% endif %}</dd></div>
+      {{ item("Primeiro pagamento", fmt_dt(payment.paid_at) if payment and payment.paid_at else None) }}
+      {{ item("Autorização Pix na Asaas" if payment and payment.is_pix else "Assinatura na Asaas",
+              payment.external_reference if payment and payment.provider == "asaas" else None) }}
+    </dl>
+  </section>
+</div>
+
+<section class="p-cartao p-cartao--tabela">
+  <div class="p-cartao__cabeca"><h2>Cobranças</h2></div>
+  {% if charges %}
+  <div class="p-tabela-rolagem">
+    <table class="p-tabela">
+      <thead><tr>
+        <th scope="col">Vencimento</th><th scope="col">Valor</th>
+        <th scope="col">Situação</th><th scope="col">Pago em</th><th scope="col"></th>
+      </tr></thead>
+      <tbody>
+        {% for c in charges %}
+        <tr>
+          <td>{{ fmt_date(c.due_date) }}</td>
+          <td>{{ brl(c.amount_cents) }}</td>
+          <td>
+            <span class="p-selo p-selo--{{ 'verde' if c.status in paid_statuses else ('vermelho' if c.status in reversed_statuses or c.status == 'OVERDUE' else 'neutro') }}">
+              {{ charge_labels.get(c.status, c.status) }}
+            </span>
+          </td>
+          <td>{{ fmt_dt(c.paid_at, '%d/%m/%Y') if c.paid_at else "—" }}</td>
+          <td>{% if c.invoice_url %}<a href="{{ c.invoice_url }}" target="_blank" rel="noopener noreferrer">Fatura</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="p-vazio">Nenhuma cobrança registrada ainda.
+    {% if payment and payment.provider == "asaas" %}Se este associado já pagou, use <strong>Conferir com a Asaas</strong> na visão geral.{% endif %}</p>
+  {% endif %}
+</section>
+
+{% if user.is_admin and m.entity_type.value == "PJ" %}
+<section class="p-cartao" id="logo">
+  <h2>Logo na página de cadastro</h2>
+  {% if logo_ok %}<div class="alerta alerta--ok" role="status">{{ logo_ok }}</div>{% endif %}
+  {% if logo_error %}<div class="alerta" role="alert">{{ logo_error }}</div>{% endif %}
+  {% if logos %}
+  <div class="p-logo-ficha">
+    {% for logo in logos %}
+    <img src="/painel/marcas/{{ logo.id }}/imagem?v={{ logo.version }}" alt="Logo de {{ logo.name }}"{% if logo.tone != 'original' %} class="p-escura"{% endif %}>
+    <span class="p-nota" style="margin:0">{{ "Aparecendo na faixa" if logo.active else "Oculta" }} ·
+      <a href="/painel/marcas">Gerenciar logos</a></span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="p-logo-ficha">
+    <form method="post" action="/painel/marcas" enctype="multipart/form-data" data-ocupado="Enviando…">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="associado" value="{{ m.id }}">
+      <input type="hidden" name="voltar" value="ficha">
+      <input type="file" name="arquivo" accept="application/pdf,image/png,image/jpeg,image/webp" required
+             aria-label="Arquivo da logo de {{ m.trade_name or m.name }}">
+      <button class="btn btn--primario btn--pequeno" type="submit">Colocar na página</button>
+    </form>
+  </div>
+  <p class="p-nota">Pode ser o PDF que a empresa mandou. O nome ({{ m.trade_name or m.name }}){% if m.website %} e o site{% endif %} vêm deste cadastro.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<div class="p-grade-2">
+  <section class="p-cartao">
+    <h2>E-mails enviados</h2>
+    {% if emails %}
+    <ul class="p-lista p-lista--compacta">
+      {% for e in emails %}
+      <li>
+        <span class="p-lista__principal"><strong>{{ e.template }}</strong><span>{{ fmt_dt(e.created_at) }} · {{ e.recipient }}</span></span>
+        <span class="p-selo p-selo--{{ 'verde' if e.succeeded else 'vermelho' }}">{{ "Enviado" if e.succeeded else "Falhou" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="p-vazio">Nenhum e-mail registrado (o envio de e-mails pode estar desligado).</p>
+    {% endif %}
+  </section>
+
+  {% if user.is_admin %}
+  <section class="p-cartao">
+    <h2>Quem acessou esta ficha</h2>
+    <ul class="p-lista p-lista--compacta">
+      {% for a in access %}
+      <li><span class="p-lista__principal"><strong>{{ a.user_name or "—" }}</strong><span>{{ action_labels.get(a.action, a.action) }} · {{ fmt_dt(a.created_at) }}</span></span></li>
+      {% endfor %}
+    </ul>
+    <p class="p-nota"><a href="/painel/registro">Registro completo de acessos</a></p>
+  </section>
+  {% endif %}
+</div>
+{% if user.is_admin %}
+<section class="p-zona-perigo">
+  <div>
+    <h2>Excluir cadastro</h2>
+    <p>Para cadastros de teste ou duplicados. Remove também a assinatura na Asaas.</p>
+  </div>
+  <a class="btn btn--perigo" href="/painel/associados/{{ m.id }}/excluir">Excluir cadastro</a>
+</section>
+{% endif %}
+{% endblock %}

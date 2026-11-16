@@ -1,0 +1,6 @@
+# Extras para rodar em um servidor próprio ou container (Docker, VPS).
+# Na Vercel nada disto é necessário: a plataforma serve a aplicação e o driver
+# do PostgreSQL já está no requirements.txt.
+
+psycopg[binary]>=3.2.10
+gunicorn>=23.0
